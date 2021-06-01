@@ -1,0 +1,252 @@
+
+### Generalities
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation VPC Template
+### Create ressources
+Resources:
+  ### First step : Create VPC
+  SodbavekaVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-main-VPC'
+        - Key: Project
+          Value: 'P10_OCR'
+  ### Next step : Create private subnets in new VPC
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3a
+      CidrBlock: 10.0.10.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-private-a'
+      VpcId: !Ref SodbavekaVPC  
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3b
+      CidrBlock: 10.0.20.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-private-b'
+      VpcId: !Ref SodbavekaVPC 
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3c
+      CidrBlock: 10.0.30.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-private-c'
+      VpcId: !Ref SodbavekaVPC 
+  ### Next step : Create public subnets in new VPC
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3a
+      CidrBlock: 10.0.1.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-a'
+      VpcId: !Ref SodbavekaVPC  
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3b
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-b'
+      VpcId: !Ref SodbavekaVPC 
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3c
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-c'
+      VpcId: !Ref SodbavekaVPC
+  ### Next step : Create internet gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-internet-gateway'
+  ### Next step : Attach internet gateway to VPC
+  AttachInternetGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref SodbavekaVPC
+      InternetGatewayId: !Ref InternetGateway
+  ### Next step : Create elastic IPs for NAT gateways
+  NatEipA:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-elastic-ip-a'
+  NatEipB:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-elastic-ip-b'
+  NatEipC:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-elastic-ip-c'
+  ### Next step : Create NAT gateways
+  NatGatewayA:
+    DependsOn: AttachInternetGateway
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipA.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-nat-a'
+  NatGatewayB:
+    DependsOn: AttachInternetGateway
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipB.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-nat-b'
+  NatGatewayC:
+    DependsOn: AttachInternetGateway
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEipC.AllocationId
+      SubnetId: !Ref PublicSubnetC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-nat-c'
+  ### Next step : Create route tables
+  PublicRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-public-a'
+  PublicRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-public-b'
+  PublicRouteTableC:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-public-c'
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-private-a'
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-private-b'
+  PrivateRouteTableC:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-route-private-c'
+  ### Next step : Create route tables associations
+  AttachPublicRouteTableA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTableA
+      SubnetId: !Ref PublicSubnetA
+  AttachPublicRouteTableB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTableB
+      SubnetId: !Ref PublicSubnetB
+  AttachPublicRouteTableC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTableC
+      SubnetId: !Ref PublicSubnetC
+  AttachPrivateRouteTableA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      SubnetId: !Ref PrivateSubnetA
+  AttachPrivateRouteTableB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      SubnetId: !Ref PrivateSubnetB
+  AttachPrivateRouteTableC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableC
+      SubnetId: !Ref PrivateSubnetC
+  ### Next step : Create routes for the public subnet of Availability Zone A
+  PublicRouteA:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTableA
+  ### Next step : Create routes for the public subnet of Availability Zone B
+  PublicRouteB:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTableB
+  ### Next step : Create routes for the public subnet of Availability Zone C
+  PublicRouteC:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTableC
+  ### Next step : Create routes for the private subnet of Availability Zone A
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA
+      RouteTableId: !Ref PrivateRouteTableA
+  ### Next step : Create routes for the private subnet of Availability Zone B
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayB
+      RouteTableId: !Ref PrivateRouteTableB
+  ### Next step : Create routes for the private subnet of Availability Zone C
+  PrivateRouteC:
+    Type: AWS::EC2::Route
+    Properties: 
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayC
+      RouteTableId: !Ref PrivateRouteTableC

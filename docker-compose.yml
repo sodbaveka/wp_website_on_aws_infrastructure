@@ -11,4 +11,4 @@ services:
       WORDPRESS_DB_PASSWORD: theseus
       WORDPRESS_DB_NAME: WordPress
     volumes:
-      - /home/theseus/wp-content:/var/www/html/wp-content
+      - /home/theseus/wordpress/:/var/www/html/

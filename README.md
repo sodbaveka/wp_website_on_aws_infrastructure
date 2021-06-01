@@ -13,8 +13,24 @@ Hello World!
 My name is Mickaël alias sodbaveka.
 I created this repository as a lab to discover wordpress, docker, aws infrastructure and services.
 
-My project as a learner is a wordpress website using docker, on aws infrastructure.
+My project as a learner is to create a wordpress website using docker, on aws infrastructure.
 
+The purpose of the yaml file 'sodbaveka_aws_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation.
+It takes care of :
+ * Create VPC
+ * Create subnets in new VPC
+ * Create internet gateway
+ * Attach internet gateway to VPC
+ * Create elastic IPs for NAT gateways
+ * Create NAT gateways
+ * Create route tables
+ * Create route tables associations
+ * Create routes for the public subnet of Availability Zone A
+ * Create routes for the public subnet of Availability Zone B
+ * Create routes for the public subnet of Availability Zone C
+ * Create routes for the private subnet of Availability Zone A
+ * Create routes for the private subnet of Availability Zone B
+ * Create routes for the private subnet of Availability Zone C
 
 Please feel free to message me if you have any questions.
 
@@ -38,7 +54,7 @@ $  git clone https://github.com/sodbaveka/wp_website_on_aws_infrastructure.git
 
 * Launch :
 ```
-To complete
+AWS CloudFormation --> Create a CloudFormation stack
 ```
 
 ### License
