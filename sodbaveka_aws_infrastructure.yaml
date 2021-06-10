@@ -8,6 +8,8 @@ Resources:
   ###########
   # Network #
   ###########
+  #
+  #
   ### First step : Create VPC
   SodbavekaVPC:
     Type: 'AWS::EC2::VPC'
@@ -253,11 +255,14 @@ Resources:
   # #     DestinationCidrBlock: 0.0.0.0/0
   # #     NatGatewayId: !Ref NatGatewayC
   # #     RouteTableId: !Ref PrivateRouteTableC
-  
+  #
+  #
   # ##################
   # # Infrastructure #
   # ##################
-  # ### First step : Create EC2 Security Group
+  #
+  #
+  ### First step : Create EC2 Security Group
   InfraEC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -280,8 +285,57 @@ Resources:
           Value: 'sodbaveka-ec2-securityG'
         - Key: Project
           Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create RDS Security Group
+  InfraRDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Infra RDS security group
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          # A MODIFIER
+          CidrIp: 0.0.0.0/0
+          # A SUPPRIMER
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref SodbavekaVPC
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-rds-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create RDS instance
+  DBserver001:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: MySQL
+      MasterUsername: theseus
+      MasterUserPassword:  theseus1
+      DBName: WordPress
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: '20'
+      AvailabilityZone: eu-west-3a
+      VPCSecurityGroups: 
+        - !Ref InfraRDSSecurityGroup
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-rds-wordpress'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
   ### Next step : Create EC2 instance
-  InstAppli003:
+  InstAppli001:
     Type : AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -304,5 +358,11 @@ Resources:
       UserData: 
         'Fn::Base64': !Sub |
           #!/bin/bash
-          sudo mkdir /home/ec2-user/TEST003
-          sudo touch /home/ec2-user/TEST003.txt
+          touch /home/ec2-user/TEMOIN-001
+          yum update -y
+          amazon-linux-extras install docker
+          yum install -y docker
+          service docker start
+          usermod -a -G docker ec2-user
+          yum install -y mysql
+
