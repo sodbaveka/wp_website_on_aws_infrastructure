@@ -320,7 +320,7 @@ Resources:
     Properties:
       Engine: MySQL
       MasterUsername: theseus
-      MasterUserPassword:  theseus1
+      MasterUserPassword: theseus1
       DBName: WordPress
       DBInstanceClass: db.t2.micro
       AllocatedStorage: '20'
@@ -336,6 +336,7 @@ Resources:
   #
   ### Next step : Create EC2 instance
   InstAppli001:
+    DependsOn: DBserver001
     Type : AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -358,11 +359,12 @@ Resources:
       UserData: 
         'Fn::Base64': !Sub |
           #!/bin/bash
-          touch /home/ec2-user/TEMOIN-001
+          export DB_HOST=${DBserver001.Endpoint.Address}
+          echo ${AWS::StackName} $DB_HOST > /home/ec2-user/TEMOIN-001
           yum update -y
           amazon-linux-extras install docker
           yum install -y docker
           service docker start
           usermod -a -G docker ec2-user
           yum install -y mysql
-
+          docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=${DBserver001.Endpoint.Address}:3306 -e WORDPRESS_DB_USER=theseus -e WORDPRESS_DB_PASSWORD=theseus1 -e WORDPRESS_DB_NAME=WordPress wordpress:latest
