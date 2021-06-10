@@ -36,6 +36,7 @@ It takes care of :
  * Create infrastructure
      * Create EC2 Security Group
      * Create RDS Security Group
+     * Create DB subnet group
      * Create RDS instance 
      * Create EC2 instance
      * ...In progress...;-p
