@@ -15,22 +15,30 @@ I created this repository as a lab to discover wordpress, docker, aws infrastruc
 
 My project as a learner is to create a wordpress website using docker, on aws infrastructure.
 
-The purpose of the yaml file 'sodbaveka_aws_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation.
+The purpose of the yaml file 'sodbaveka_aws_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation...from scratch.
+
 It takes care of :
- * Create VPC
- * Create subnets in new VPC
- * Create internet gateway
- * Attach internet gateway to VPC
- * Create elastic IPs for NAT gateways
- * Create NAT gateways
- * Create route tables
- * Create route tables associations
- * Create routes for the public subnet of Availability Zone A
- * Create routes for the public subnet of Availability Zone B
- * Create routes for the public subnet of Availability Zone C
- * Create routes for the private subnet of Availability Zone A
- * Create routes for the private subnet of Availability Zone B
- * Create routes for the private subnet of Availability Zone C
+ * Create network
+     * Create VPC
+     * Create subnets in new VPC
+     * Create internet gateway
+     * Attach internet gateway to VPC
+     * Create elastic IPs for NAT gateways
+     * Create NAT gateways
+     * Create route tables
+     * Create route tables associations
+     * Create routes for the public subnet of Availability Zone A
+     * Create routes for the public subnet of Availability Zone B
+     * Create routes for the public subnet of Availability Zone C
+     * Create routes for the private subnet of Availability Zone A
+     * Create routes for the private subnet of Availability Zone B
+     * Create routes for the private subnet of Availability Zone C
+ * Create infrastructure
+     * Create EC2 Security Group
+     * Create RDS Security Group
+     * Create RDS instance 
+     * Create EC2 instance
+     * ...In progress...;-p
 
 Please feel free to message me if you have any questions.
 
@@ -39,11 +47,16 @@ Bye ;-)
 ### Technologies
 ***
 A list of technologies used within the project :
+* aws CloudFormation
 * aws EC2
 * aws RDS
 * aws S3
-* aws CloudFormation
+* aws EFS
 * Docker
+* Wordpress
+* OpenVPN
+* Amazon Linux 2 OS
+* AlmaLinux OS
 
 ### Installation
 ***
@@ -64,4 +77,6 @@ AWS CloudFormation --> Create a CloudFormation stack
 
 ### Ressources
 ***
-* 'docker and aws for dummies’ :-p 
+* https://docs.aws.amazon.com/
+* https://docs.docker.com/
+* 'aws and docker for dummies’ :-p 
