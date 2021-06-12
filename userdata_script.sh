@@ -26,6 +26,7 @@ docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=sdid8mq0c7smnv.cb
 
 echo "wp-cli, website and S3 plugin installation in docker container : In progress..." >> /var/log/userdata.txt
 docker exec -ti --tty=false myWordpress bash <<-EOF 
+echo "wp-cli installation : In progress..." >> /var/log/wordpressDocker.txt
 curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
 php wp-cli.phar --info
 chmod +x wp-cli.phar
@@ -34,13 +35,13 @@ if [ -e /var/www/html/installOk.txt ]
 then
     echo "Wordpress already installed" >> /var/log/wordpressDocker.txt
 else
-    echo "Wordpress installation started" >> /var/log/wordpressDocker.txt
+    echo "Wordpress installation : In progress..." >> /var/log/wordpressDocker.txt
     wp core install --url=35.180.242.30 --title="SodbavekaWebsite" --admin_user=theseus --admin_password=theseus --admin_email=sodbaveka@gmail.com --allow-root
     wp plugin install amazon-s3-and-cloudfront --allow-root
     wp plugin activate amazon-s3-and-cloudfront --allow-root
     cd /var/www/html
-    sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => 'AKIA6AUE22GSZGYL2LN2','secret-access-key' => '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',) ) );" wp-config.php
-    touch installOk.txt && echo "Wordpress installation completed" >> /var/log/wordpressDocker.txt
+    sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => '','secret-access-key' => '',) ) );" wp-config.php
+    touch installOk.txt && echo "Wordpress installation : Completed." >> /var/log/wordpressDocker.txt
 fi
 EOF
 echo "wp-cli, website and S3 plugin installation in docker container : Completed." >> /var/log/userdata.txt
