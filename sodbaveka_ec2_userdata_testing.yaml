@@ -61,6 +61,27 @@ Resources:
           Value: 'P10_OCR'
   #
   #
+  ### Next step : Create EFS Security Group
+  InfraEFSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Infra EFS security group
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref InfraEC2SecurityGroup
+      VpcId: vpc-8ce01ae4
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-efs-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
   ### Next step : Create RDS instance
   DBserver001:
     Type: AWS::RDS::DBInstance
@@ -81,9 +102,46 @@ Resources:
           Value: 'P10_OCR'
   #
   #
+  ### Next step : Create EFS instance
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      BackupPolicy:
+        Status: ENABLED
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_60_DAYS
+      PerformanceMode: generalPurpose
+      Encrypted: true
+      ThroughputMode: bursting
+      FileSystemTags: 
+        - Key: Name
+          Value: 'sodbaveka-efs-instance'
+        - Key: Project
+          Value: 'P10_OCR'
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: !Ref EFSFileSystem
+      IpAddress: 172.31.0.30
+      SecurityGroups: 
+        - !Ref InfraEFSSecurityGroup
+      SubnetId: subnet-130eef7b
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties: 
+      FileSystemId: !Ref EFSFileSystem
+      IpAddress: 172.31.16.30
+      SecurityGroups: 
+        - !Ref InfraEFSSecurityGroup
+      SubnetId: subnet-bcb78fc7
+  #
+  #
   ### Next step : Create EC2 instance
   InstAppli001:
-    DependsOn: DBserver001
+    DependsOn: 
+      - EFSFileSystem
+      - DBserver001
     Type : AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -103,9 +161,43 @@ Resources:
         'Fn::Base64': !Sub |
           #!/bin/bash
           export DB_HOST=${DBserver001.Endpoint.Address}
-          export EC2_HOST=${InstAppli001.PublicIp}
-          echo ${AWS::StackName} $DB_HOST $EC2_HOST > /home/ec2-user/TEMOIN-001
+          export STACK_NAME=${AWS::StackName}
+          export EFS_IP=${MountTarget1.IpAddress}
+          export EFS_ID=${EFSFileSystem.FileSystemId}
+          echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
+          echo "EFS ip : "$EFS_IP >> /home/ec2-user/TEMOIN-001
+          echo "EFS id : "$EFS_ID >> /home/ec2-user/TEMOIN-001
+          echo "Database host : "$DB_HOST >> /home/ec2-user/TEMOIN-001
           
-          
+          echo "OS update : In progress..." >> /var/log/userdata.txt
+          yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
 
+          echo "Docker installation : In progress..." >> /var/log/userdata.txt
+          amazon-linux-extras install docker
+          yum install -y docker
+          service docker start && echo "Docker installation : Completed." >> /var/log/userdata.txt
+          usermod -a -G docker ec2-user
+
+          echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
+          yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
+
+          echo "Mounting aws efs : In progress..." >> /var/log/userdata.txt
+          mkdir /home/ec2-user/efs-mount-point
+          mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport $EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point
+          chmod -R 777 /home/ec2-user/efs-mount-point
+          cd /home/ec2-user/efs-mount-point
+          echo "test - `date`" > mount_log.txt && echo "Mounting aws efs : Completed." >> /var/log/userdata.txt
+
+          echo "Running wordpress docker : In progress..." >> /var/log/userdata.txt
+          docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=$DB_HOST:3306 -e WORDPRESS_DB_USER=theseus -e WORDPRESS_DB_PASSWORD=theseus1 -e WORDPRESS_DB_NAME=WordPress -v /home/ec2-user/efs-mount-point/:/var/www/html/ wordpress:latest
+
+          echo "wp-cli, website and S3 plugin installation in docker container : In progress..." >> /var/log/userdata.txt
+          docker exec -ti --tty=false myWordpress bash <<-EOF 
+          echo "wp-cli installation : In progress..." >> /var/log/wordpressDocker.txt
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          php wp-cli.phar --info
+          chmod +x wp-cli.phar
+          mv wp-cli.phar /usr/local/bin/wp && echo "wp-cli installation : Completed." >> /var/log/wordpressDocker.txt
+          
+          echo "wp-cli, website and S3 plugin installation in docker container : Completed." >> /var/log/userdata.txt
           

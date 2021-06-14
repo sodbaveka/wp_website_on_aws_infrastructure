@@ -1,4 +1,11 @@
 #!/bin/bash
+export DB_HOST=${DBserver001.Endpoint.Address}
+export STACK_NAME=${AWS::StackName}
+export EFS_IP=${MountTarget1.IpAddress}
+echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
+echo "EFS ip : "$EFS_IP >> /home/ec2-user/TEMOIN-001
+echo "Database host : "$DB_HOST >> /home/ec2-user/TEMOIN-001
+
 # debug mode
 set -x
 
@@ -16,13 +23,13 @@ yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/lo
 
 echo "Mounting aws efs : In progress..." >> /var/log/userdata.txt
 mkdir /home/ec2-user/efs-mount-point
-mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 172.31.6.143:/ /home/ec2-user/efs-mount-point
+mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport $EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point
 chmod -R 777 /home/ec2-user/efs-mount-point
 cd /home/ec2-user/efs-mount-point
 echo "test - `date`" > mount_log.txt && echo "Mounting aws efs : Completed." >> /var/log/userdata.txt
 
 echo "Running wordpress docker : In progress..." >> /var/log/userdata.txt
-docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=sdid8mq0c7smnv.cbabx2xtced1.eu-west-3.rds.amazonaws.com:3306 -e WORDPRESS_DB_USER=theseus -e WORDPRESS_DB_PASSWORD=theseus1 -e WORDPRESS_DB_NAME=WordPress -v /home/ec2-user/efs-mount-point/:/var/www/html/ wordpress:latest
+docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=$DB_HOST:3306 -e WORDPRESS_DB_USER=theseus -e WORDPRESS_DB_PASSWORD=theseus1 -e WORDPRESS_DB_NAME=WordPress -v /home/ec2-user/efs-mount-point/:/var/www/html/ wordpress:latest
 
 echo "wp-cli, website and S3 plugin installation in docker container : In progress..." >> /var/log/userdata.txt
 docker exec -ti --tty=false myWordpress bash <<-EOF 
@@ -36,18 +43,18 @@ then
     echo "Wordpress already installed" >> /var/log/wordpressDocker.txt
 else
     echo "Wordpress installation : In progress..." >> /var/log/wordpressDocker.txt
-    wp core install --url=35.180.242.30 --title="SodbavekaWebsite" --admin_user=theseus --admin_password=theseus --admin_email=sodbaveka@gmail.com --allow-root
-    wp plugin install amazon-s3-and-cloudfront --allow-root
-    wp plugin activate amazon-s3-and-cloudfront --allow-root
+    wp core install --url="website_ip" --title="SodbavekaWebsite" --admin_user=theseus --admin_password=theseus --admin_email=sodbaveka@gmail.com --allow-root
+    wp plugin install amazon-s3-and-cloudfront --allow-root && wp plugin activate amazon-s3-and-cloudfront --allow-root
     cd /var/www/html
-    sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => '','secret-access-key' => '',) ) );" wp-config.php
+    sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => '*****','secret-access-key' => '*****',) ) );" wp-config.php
+    chmod -R 777 /var/www/html/
     touch installOk.txt && echo "Wordpress installation : Completed." >> /var/log/wordpressDocker.txt
 fi
 EOF
 echo "wp-cli, website and S3 plugin installation in docker container : Completed." >> /var/log/userdata.txt
 
 # To complete : fstab update
-# exist=`grep -i "${ip}" /etc/fstab`
+# exist=`grep -i "$EFS_IP" /etc/fstab`
 # if [[ -z "${exist}" ]] ; then
 #   echo blabla >> /etc/fstab  
 # fi 
