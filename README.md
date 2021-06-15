@@ -36,9 +36,19 @@ It takes care of :
  * Create infrastructure
      * Create EC2 Security Group
      * Create RDS Security Group
+     * Create EFS Security Group
      * Create DB subnet group
      * Create RDS instance 
+     * Create EFS file system
+     * Create Mount Targets
      * Create EC2 instance
+        * OS update
+        * Docker installation
+        * Mysql-client installation
+        * Mounting aws efs
+        * Writing in fstab
+        * Running wordpress docker
+        * Wordpress website installation
      * ...In progress...;-p
 
 Please feel free to message me if you have any questions.

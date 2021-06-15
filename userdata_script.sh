@@ -28,6 +28,13 @@ chmod -R 777 /home/ec2-user/efs-mount-point
 cd /home/ec2-user/efs-mount-point
 echo "test - `date`" > mount_log.txt && echo "Mounting aws efs : Completed." >> /var/log/userdata.txt
 
+echo "Writing in fstab : In progress..." >> /var/log/userdata.txt
+export EXIST_MOUNT=`grep -i "$EFS_ID" /etc/fstab`
+if [[ -z "$EXIST_MOUNT" ]] ; then
+    echo "$EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point nfs defaults,_netdev 0 0" >> /etc/fstab  
+fi
+echo "Writing in fstab : Completed." >> /var/log/userdata.txt
+
 echo "Running wordpress docker : In progress..." >> /var/log/userdata.txt
 docker run -d -p 80:80 --name=myWordpress -e WORDPRESS_DB_HOST=$DB_HOST:3306 -e WORDPRESS_DB_USER=theseus -e WORDPRESS_DB_PASSWORD=theseus1 -e WORDPRESS_DB_NAME=WordPress -v /home/ec2-user/efs-mount-point/:/var/www/html/ wordpress:latest
 
@@ -53,8 +60,4 @@ fi
 EOF
 echo "wp-cli, website and S3 plugin installation in docker container : Completed." >> /var/log/userdata.txt
 
-# To complete : fstab update
-# exist=`grep -i "$EFS_IP" /etc/fstab`
-# if [[ -z "${exist}" ]] ; then
-#   echo blabla >> /etc/fstab  
-# fi 
+
