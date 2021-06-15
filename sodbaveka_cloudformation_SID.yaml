@@ -23,6 +23,10 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
@@ -34,113 +38,8 @@ Resources:
           Value: 'P10_OCR'
   #
   #
-  # ### Next step : Create RDS Security Group
-  # InfraRDSSecurityGroup:
-  #   Type: AWS::EC2::SecurityGroup
-  #   Properties:
-  #     GroupDescription: Infra RDS security group
-  #     SecurityGroupEgress:
-  #       - IpProtocol: -1
-  #         CidrIp: 0.0.0.0/0
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: 3306
-  #         ToPort: 3306
-  #         # A MODIFIER
-  #         CidrIp: 0.0.0.0/0
-  #         # A SUPPRIMER
-  #       - IpProtocol: tcp
-  #         FromPort: 22
-  #         ToPort: 22
-  #         CidrIp: 0.0.0.0/0
-  #     VpcId: vpc-8ce01ae4
-  #     Tags:
-  #       - Key: Name
-  #         Value: 'sodbaveka-rds-securityG'
-  #       - Key: Project
-  #         Value: 'P10_OCR'
-  # #
-  # #
-  # ### Next step : Create RDS instance
-  # DBserver001:
-  #   Type: AWS::RDS::DBInstance
-  #   Properties:
-  #     Engine: MySQL
-  #     MasterUsername: theseus
-  #     MasterUserPassword: theseus1
-  #     DBName: WordPress
-  #     DBInstanceClass: db.t2.micro
-  #     AllocatedStorage: '20'
-  #     AvailabilityZone: eu-west-3a
-  #     VPCSecurityGroups: 
-  #       - !Ref InfraRDSSecurityGroup
-  #     Tags:
-  #       - Key: Name
-  #         Value: 'sodbaveka-rds-testInstance'
-  #       - Key: Project
-  #         Value: 'P10_OCR'
-  # #
-  # #
-  ### Next step : Create EFS Security Group
-  InfraEFSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Infra EFS security group
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          SourceSecurityGroupId: !Ref InfraEC2SecurityGroup
-      VpcId: vpc-8ce01ae4
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-efs-securityG'
-        - Key: Project
-          Value: 'P10_OCR'
-  #
-  #
-  ### Next step : Create EFS instance
-  EFSFileSystem:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      BackupPolicy:
-        Status: ENABLED
-      Encrypted: true
-      LifecyclePolicies:
-        - TransitionToIA: AFTER_60_DAYS
-      PerformanceMode: generalPurpose
-      Encrypted: true
-      ThroughputMode: bursting
-      FileSystemTags: 
-        - Key: Name
-          Value: 'sodbaveka-efs-instance'
-        - Key: Project
-          Value: 'P10_OCR'
-  MountTarget1:
-    Type: AWS::EFS::MountTarget
-    Properties: 
-      FileSystemId: !Ref EFSFileSystem
-      IpAddress: 172.31.0.30
-      SecurityGroups: 
-        - !Ref InfraEFSSecurityGroup
-      SubnetId: subnet-130eef7b
-  MountTarget2:
-    Type: AWS::EFS::MountTarget
-    Properties: 
-      FileSystemId: !Ref EFSFileSystem
-      IpAddress: 172.31.16.30
-      SecurityGroups: 
-        - !Ref InfraEFSSecurityGroup
-      SubnetId: subnet-bcb78fc7
-  #
-  #
   ### Next step : Create EC2 instance
   InstAppli001:
-    DependsOn: 
-      - EFSFileSystem
     Type : AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro
@@ -154,7 +53,7 @@ Resources:
             - !Ref InfraEC2SecurityGroup
       Tags:
         - Key: Name
-          Value: 'sodbaveka-ec2-testInstance'
+          Value: 'sodbaveka-ec2-firstInstance'
         - Key: Project
           Value: 'P10_OCR'
       UserData: 
@@ -162,12 +61,9 @@ Resources:
           #!/bin/bash
           
           export STACK_NAME=${AWS::StackName}
-          export EFS_IP=${MountTarget1.IpAddress}
-          export EFS_ID=${EFSFileSystem.FileSystemId}
           echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
-          echo "EFS ip : "$EFS_IP >> /home/ec2-user/TEMOIN-001
-          echo "EFS id : "$EFS_ID >> /home/ec2-user/TEMOIN-001
-          echo "Database host : "$DB_HOST >> /home/ec2-user/TEMOIN-001
+
+          touch /home/ec2-user/test_instance_userdata.txt          
           
           echo "OS update : In progress..." >> /var/log/userdata.txt
           yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
@@ -181,16 +77,102 @@ Resources:
           echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
           yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
 
-          echo "Mounting aws efs : In progress..." >> /var/log/userdata.txt
-          mkdir /home/ec2-user/efs-mount-point
-          mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport $EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point
-          chmod -R 777 /home/ec2-user/efs-mount-point
-          cd /home/ec2-user/efs-mount-point
-          echo "test - `date`" > mount_log.txt && echo "Mounting aws efs : Completed." >> /var/log/userdata.txt
+          docker run -p 8080:8080 -p 8443:8443 bitnami/apache:latest
+  #
+  #
+  ### Next step : Create Launch Configuration
+  WebsiteLaunchConfig:
+    DependsOn: 
+      - InstAppli001
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      AssociatePublicIpAddress: true
+      InstanceId: !Ref InstAppli001
+      # InstanceType: t2.micro
+      KeyName: P10-aws
+      LaunchConfigurationName: "sodbaveka-launchConfiguration"
+      SecurityGroups:
+        - !Ref InfraEC2SecurityGroup
+      UserData: 
+        'Fn::Base64': !Sub |
+          #!/bin/bash
+          
+          export STACK_NAME=${AWS::StackName}
+          echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
 
-          echo "Writing in fstab : In progress..." >> /var/log/userdata.txt
-          export EXIST_MOUNT=`grep -i "$EFS_ID" /etc/fstab`
-          if [[ -z "$EXIST_MOUNT" ]] ; then
-            echo "$EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point nfs defaults,_netdev 0 0" >> /etc/fstab  
-          fi
-          echo "Writing in fstab : Completed." >> /var/log/userdata.txt
+          touch /home/ec2-user/test_launchConfig_userdata.txt   
+
+          echo "OS update : In progress..." >> /var/log/userdata.txt
+          yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
+
+          echo "Docker installation : In progress..." >> /var/log/userdata.txt
+          amazon-linux-extras install docker
+          yum install -y docker
+          service docker start && echo "Docker installation : Completed." >> /var/log/userdata.txt
+          usermod -a -G docker ec2-user
+
+          echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
+          yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
+
+          docker run -p 8080:8080 -p 8443:8443 bitnami/apache:latest
+  ### Next step : Create Scaling Group
+  WebsiteScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: "sodbaveka-autoScalingGroup"
+      LaunchConfigurationName: !Ref WebsiteLaunchConfig
+      AvailabilityZones:
+        - Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
+        - Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref AWS::Region
+      VPCZoneIdentifier: 
+        - subnet-130eef7b
+        - subnet-bcb78fc7
+      DesiredCapacity: 2
+      MaxSize: 2
+      MinSize: 1
+      TargetGroupARNs: 
+        - !Ref WebsiteTargetGroup
+  ### Next step : Create Target Group
+  WebsiteTargetGroup: 
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      Port: 8080
+      Protocol: HTTP
+      VpcId: vpc-8ce01ae4
+  ### Next step : Create Load Balancer
+  WebsiteLoadBalancer: 
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref WebsiteLoadBalancerSecurityGroup
+      Subnets:  
+        - subnet-130eef7b
+        - subnet-bcb78fc7
+  WebsiteLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Website EC2 security group 
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-8ce01ae4
+  WebsiteLoadBlancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref WebsiteLoadBalancer
+      Port: 8080
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref WebsiteTargetGroup
