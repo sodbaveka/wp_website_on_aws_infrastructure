@@ -34,14 +34,14 @@ It takes care of :
      * Create routes for the private subnet of Availability Zone B
      * Create routes for the private subnet of Availability Zone C
  * Create infrastructure
-     * Create EC2 Security Group
      * Create RDS Security Group
-     * Create EFS Security Group
      * Create DB subnet group
      * Create RDS instance 
+     * Create EFS Security Group
      * Create EFS file system
      * Create Mount Targets
-     * Create EC2 instance
+     * Create EC2 Security Group
+     * Create Launch Configuration
         * OS update
         * Docker installation
         * Mysql-client installation
@@ -49,6 +49,10 @@ It takes care of :
         * Writing in fstab
         * Running wordpress docker
         * Wordpress website installation
+        * Logs
+     * Create Auto Scaling Group
+     * Create Target Group
+     * Create Load Balancer
      * ...In progress...;-p
 
 Please feel free to message me if you have any questions.

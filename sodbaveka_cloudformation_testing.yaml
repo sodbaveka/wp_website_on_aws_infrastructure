@@ -9,32 +9,7 @@ Resources:
   # ##################
   #
   #
-  ### First step : Create EC2 Security Group
-  InfraEC2SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Infra EC2 security group
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-      VpcId: vpc-8ce01ae4
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-ec2-securityG'
-        - Key: Project
-          Value: 'P10_OCR'
-  #
-  #
-  ### Next step : Create RDS Security Group
+  ### First step : Create RDS Security Group
   InfraRDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -93,7 +68,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 2049
           ToPort: 2049
-         SourceSecurityGroupId: !Ref InfraEC2SecurityGroup
+          SourceSecurityGroupId: !Ref InfraEC2SecurityGroup
       VpcId: vpc-8ce01ae4
       Tags:
         - Key: Name
@@ -135,6 +110,31 @@ Resources:
       SecurityGroups: 
         - !Ref InfraEFSSecurityGroup
       SubnetId: subnet-bcb78fc7
+  #
+  #
+  ### Next step : Create EC2 Security Group
+  InfraEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Infra EC2 security group
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-8ce01ae4
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-ec2-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
   #
   #
   ### Next step : Create EC2 instance
@@ -323,7 +323,7 @@ Resources:
       VPCZoneIdentifier: 
         - subnet-130eef7b
         - subnet-bcb78fc7
-      DesiredCapacity: 1
+      DesiredCapacity: 2
       MaxSize: 2
       MinSize: 1
       TargetGroupARNs: 
@@ -336,6 +336,11 @@ Resources:
     Properties: 
       Port: 80
       Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: "stickiness.enabled"
+          Value: true
+        - Key: "stickiness.type"
+          Value: "lb_cookie"
       VpcId: vpc-8ce01ae4
   #
   #
