@@ -1,0 +1,235 @@
+### Generalities
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation VPC Template
+### Create ressources
+Resources:
+  # ##################
+  # # Infrastructure #
+  # ##################
+  #
+  #
+  ### First step : Create EC2 Security Group
+  InfraEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Infra EC2 security group
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-8ce01ae4
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-ec2-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create EC2 instance
+  # InstAppli001:
+  #   Type : AWS::EC2::Instance
+  #   Properties:
+  #     InstanceType: t2.micro
+  #     ImageId: ami-00c08ad1a6ca8ca7c
+  #     KeyName: P10-aws
+  #     NetworkInterfaces:
+  #       - AssociatePublicIpAddress: true
+  #         DeviceIndex: "0"
+  #         GroupSet: 
+  #           - !Ref InfraEC2SecurityGroup
+  #     AvailabilityZone: eu-west-3a
+  #     Tags:
+  #       - Key: Name
+  #         Value: 'sodbaveka-ec2-testInstance'
+  #       - Key: Project
+  #         Value: 'P10_OCR'
+  #     UserData: 
+  #       'Fn::Base64': !Sub |
+  #         #!/bin/bash
+  #         export STACK_NAME=${AWS::StackName}
+          
+  #         echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
+          
+  #         echo "OS update : In progress..." >> /var/log/userdata.txt
+  #         yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
+
+  #         echo "Docker installation : In progress..." >> /var/log/userdata.txt
+  #         amazon-linux-extras install docker
+  #         yum install -y docker           
+  #         service docker start && echo "Docker installation : Completed." >> /var/log/userdata.txt
+  #         usermod -a -G docker ec2-user
+
+  #         echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
+  #         yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
+  #         echo "stress package installation : In progress..." >> /var/log/userdata.txt
+  #         amazon-linux-extras install epel -y
+  #         yum install -y stress && echo "stress package installation : Completed." >> /var/log/userdata.txt
+
+  #         echo "Running apache docker : In progress..." >> /var/log/userdata.txt
+  #         docker run -p 8080:8080 -p 80:80 bitnami/apache:latest
+  #
+  #
+  ### Next step : Create Launch Configuration
+  WebsiteLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties: 
+      AssociatePublicIpAddress: true
+      ImageId: ami-00c08ad1a6ca8ca7c
+      InstanceType: t2.micro
+      KeyName: P10-aws
+      LaunchConfigurationName: "sodbaveka-launchConfiguration"
+      SecurityGroups:
+        - !Ref InfraEC2SecurityGroup
+      UserData: 
+        'Fn::Base64': !Sub |
+          #!/bin/bash
+          export LB_DNS=${WebsiteLoadBalancer.DNSName}
+          export STACK_NAME=${AWS::StackName}
+          
+          echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
+          echo "Load Balancer DNS : "$LB_DNS > /home/ec2-user/TEMOIN-001
+
+          echo "OS update : In progress..." >> /var/log/userdata.txt
+          yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
+
+          echo "Docker installation : In progress..." >> /var/log/userdata.txt
+          amazon-linux-extras install docker
+          yum install -y docker           
+          service docker start && echo "Docker installation : Completed." >> /var/log/userdata.txt
+          usermod -a -G docker ec2-user
+
+          echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
+          yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
+          echo "stress package installation : In progress..." >> /var/log/userdata.txt
+          amazon-linux-extras install epel -y
+          yum install -y stress && echo "stress package installation : Completed." >> /var/log/userdata.txt
+
+          echo "Running apache docker : In progress..." >> /var/log/userdata.txt
+          docker run -p 8080:8080 -p 80:80 bitnami/apache:latest
+  #        
+  #
+  ### Next step : Create Scaling Group
+  WebsiteScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: "sodbaveka-autoScalingGroup"
+      LaunchConfigurationName: !Ref WebsiteLaunchConfig
+      AvailabilityZones:
+        - Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
+        - Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref AWS::Region
+      VPCZoneIdentifier: 
+        - subnet-130eef7b
+        - subnet-bcb78fc7
+      MetricsCollection:
+        - Granularity: 1Minute
+      DesiredCapacity: 2
+      MaxSize: 4
+      MinSize: 1
+      TargetGroupARNs: 
+        - !Ref WebsiteTargetGroup
+  
+  
+  ## Next step : Create Target Group
+  WebsiteTargetGroup: 
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      Port: 8080
+      Protocol: HTTP
+      VpcId: vpc-8ce01ae4
+  #
+  #
+  ### Next step : Create Load Balancer
+  WebsiteLoadBalancer: 
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref WebsiteLoadBalancerSecurityGroup
+      Subnets:  
+        - subnet-130eef7b
+        - subnet-bcb78fc7
+  WebsiteLoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Website EC2 security group 
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-8ce01ae4
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-loadB-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
+  WebsiteLoadBlancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      LoadBalancerArn: !Ref WebsiteLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref WebsiteTargetGroup
+  #
+  #
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: sodbaveka-cloudwatch-alarm
+      AlarmDescription: Scale-up if CPU is greater than 80%
+      AlarmActions:
+        - !Ref WebServerScaleUpPolicy
+        - !Ref SNSTopicEmail        
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      TreatMissingData: missing
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref WebsiteScalingGroup
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebsiteScalingGroup
+      PolicyType: SimpleScaling
+      ScalingAdjustment: 1
+  SNSTopicEmail:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: AlarmTopic
+      Subscription:
+        - Endpoint: "sodbaveka@gmail.com"
+          Protocol: "email"
+
+          

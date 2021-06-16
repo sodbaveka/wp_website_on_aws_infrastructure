@@ -1,0 +1,116 @@
+### Generalities
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation VPC Template
+### Create ressources
+Resources:
+  # ##################
+  # # Infrastructure #
+  # ##################
+  #
+  #
+  ### First step : Create RDS Security Group
+  InfraRDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Infra RDS security group
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          # A MODIFIER
+          CidrIp: 0.0.0.0/0
+          # A SUPPRIMER
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-8ce01ae4
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-rds-securityG'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create RDS instance
+  DBserver001:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: MySQL
+      MasterUsername: theseus
+      MasterUserPassword: theseus1
+      DBName: WordPress
+      MultiAZ: true
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: '20'
+      #AvailabilityZone: eu-west-3a
+      VPCSecurityGroups: 
+        - !Ref InfraRDSSecurityGroup
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-rds-testInstance'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  # ### Next step : Create EFS Security Group
+  # InfraEFSSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Infra EFS security group
+  #     SecurityGroupEgress:
+  #       - IpProtocol: -1
+  #         CidrIp: 0.0.0.0/0
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 2049
+  #         ToPort: 2049
+  #         CidrIp: 0.0.0.0/0
+  #         #SourceSecurityGroupId: !Ref InfraEC2SecurityGroup
+  #     VpcId: vpc-8ce01ae4
+  #     Tags:
+  #       - Key: Name
+  #         Value: 'sodbaveka-efs-securityG'
+  #       - Key: Project
+  #         Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create EFS instance
+  # EFSFileSystem:
+  #   Type: AWS::EFS::FileSystem
+  #   Properties:
+  #     BackupPolicy:
+  #       Status: ENABLED
+  #     Encrypted: true
+  #     LifecyclePolicies:
+  #       - TransitionToIA: AFTER_60_DAYS
+  #     PerformanceMode: generalPurpose
+  #     Encrypted: true
+  #     ThroughputMode: bursting
+  #     FileSystemTags: 
+  #       - Key: Name
+  #         Value: 'sodbaveka-efs-instance'
+  #       - Key: Project
+  #         Value: 'P10_OCR'
+  # MountTarget1:
+  #   Type: AWS::EFS::MountTarget
+  #   Properties: 
+  #     FileSystemId: !Ref EFSFileSystem
+  #     IpAddress: 172.31.0.30
+  #     SecurityGroups: 
+  #       - !Ref InfraEFSSecurityGroup
+  #     SubnetId: subnet-130eef7b
+  # MountTarget2:
+  #   Type: AWS::EFS::MountTarget
+  #   Properties: 
+  #     FileSystemId: !Ref EFSFileSystem
+  #     IpAddress: 172.31.16.30
+  #     SecurityGroups: 
+  #       - !Ref InfraEFSSecurityGroup
+  #     SubnetId: subnet-bcb78fc7
+  #
+  #

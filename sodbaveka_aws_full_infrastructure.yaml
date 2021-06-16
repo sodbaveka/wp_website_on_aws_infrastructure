@@ -316,7 +316,9 @@ Resources:
       DBName: WordPress
       DBInstanceClass: db.t2.micro
       AllocatedStorage: '20'
-      AvailabilityZone: eu-west-3a
+      MultiAZ: true
+      # Not allowed with MultiAZ
+      #AvailabilityZone: eu-west-3a
       VPCSecurityGroups: 
         - !Ref InfraRDSSecurityGroup
       Tags:
@@ -478,6 +480,10 @@ Resources:
           echo "Mysql-client installation : In progress..." >> /var/log/userdata.txt
           yum install -y mysql && echo "Mysql-client installation : Completed." >> /var/log/userdata.txt
 
+          echo "stress package installation : In progress..." >> /var/log/userdata.txt
+          amazon-linux-extras install epel -y
+          yum install -y stress && echo "stress package installation : Completed." >> /var/log/userdata.txt
+
           echo "Mounting aws efs : In progress..." >> /var/log/userdata.txt
           mkdir /home/ec2-user/efs-mount-point
           mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport $EFS_ID.efs.eu-west-3.amzonaws.com:/ /home/ec2-user/efs-mount-point
@@ -534,8 +540,10 @@ Resources:
       VPCZoneIdentifier: 
         - !Ref PublicSubnetA
         - !Ref PublicSubnetB
+      MetricsCollection:
+        - Granularity: 1Minute
       DesiredCapacity: 2
-      MaxSize: 2
+      MaxSize: 4
       MinSize: 1
       TargetGroupARNs: 
         - !Ref WebsiteTargetGroup
@@ -595,3 +603,47 @@ Resources:
           TargetGroupArn: !Ref WebsiteTargetGroup
   #
   #
+  ### Next step : Create CloudWatch Alarm to check CPU usage
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: sodbaveka-cloudwatch-alarm
+      AlarmDescription: Scale-up if CPU is greater than 80%
+      AlarmActions:
+        - !Ref WebServerScaleUpPolicy
+        - !Ref SNSTopicEmail        
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      TreatMissingData: missing
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: !Ref WebsiteScalingGroup
+  #
+  #
+  ### Next step : Create Scale Up Policy
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebsiteScalingGroup
+      PolicyType: SimpleScaling
+      ScalingAdjustment: 1
+  #
+  #
+  ### Next step : Create topic to send notification by mail
+  SNSTopicEmail:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: AlarmTopic
+      Subscription:
+        - Endpoint: "sodbaveka@gmail.com"
+          Protocol: "email"
+  #
+  #
+          

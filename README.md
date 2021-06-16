@@ -15,7 +15,7 @@ I created this repository as a lab to discover wordpress, docker, aws infrastruc
 
 My project as a learner is to create a wordpress website using docker, on aws infrastructure.
 
-The purpose of the yaml file 'sodbaveka_aws_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation...from scratch.
+The purpose of the yaml file 'sodbaveka_aws_full_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation...from scratch.
 
 It takes care of :
  * Create network
@@ -53,6 +53,9 @@ It takes care of :
      * Create Auto Scaling Group
      * Create Target Group
      * Create Load Balancer
+     * Create CloudWatch Alarm to check CPU usage
+     * Create Scale Up Policy
+     * Create topic to send notification by mail
      * ...In progress...;-p
 
 Please feel free to message me if you have any questions.
@@ -67,6 +70,9 @@ A list of technologies used within the project :
 * aws RDS
 * aws S3
 * aws EFS
+* aws Simple Notification Service
+* aws VPC
+* aws CloudWatch
 * Docker
 * Wordpress
 * OpenVPN
