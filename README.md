@@ -45,6 +45,7 @@ It takes care of :
         * OS update
         * Docker installation
         * Mysql-client installation
+        * stress package installation
         * Mounting aws efs
         * Writing in fstab
         * Running wordpress docker
@@ -56,6 +57,7 @@ It takes care of :
      * Create CloudWatch Alarm to check CPU usage
      * Create Scale Up Policy
      * Create topic to send notification by mail
+     * Create S3 public bucket
      * ...In progress...;-p
 
 Please feel free to message me if you have any questions.
@@ -100,4 +102,5 @@ AWS CloudFormation --> Create a CloudFormation stack
 ***
 * https://docs.aws.amazon.com/
 * https://docs.docker.com/
+* https://deliciousbrains.com/wp-offload-media/
 * 'aws and docker for dummies’ :-p 

@@ -445,6 +445,7 @@ Resources:
     DependsOn: 
       - EFSFileSystem
       - DBserver001
+      - S3Bucket
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties: 
       AssociatePublicIpAddress: true
@@ -462,11 +463,13 @@ Resources:
           export EFS_IP=${MountTarget1.IpAddress}
           export EFS_ID=${EFSFileSystem.FileSystemId}
           export LB_DNS=${WebsiteLoadBalancer.DNSName}
+          export BUCKET=${S3Bucket}
           echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
           echo "EFS ip : "$EFS_IP >> /home/ec2-user/TEMOIN-001
           echo "EFS id : "$EFS_ID >> /home/ec2-user/TEMOIN-001
           echo "Database host : "$DB_HOST >> /home/ec2-user/TEMOIN-001
           echo "Load Balancer DNS : "$LB_DNS >> /home/ec2-user/TEMOIN-001
+          echo "S3 bucket name : "$BUCKET >> /home/ec2-user/TEMOIN-001
           
           echo "OS update : In progress..." >> /var/log/userdata.txt
           yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
@@ -516,7 +519,8 @@ Resources:
               wp core install --url="$LB_DNS" --title="SodbavekaWebsite" --admin_user=theseus --admin_password=theseus --admin_email=sodbaveka@gmail.com --allow-root
               wp plugin install amazon-s3-and-cloudfront --allow-root && wp plugin activate amazon-s3-and-cloudfront --allow-root
               cd /var/www/html
-              sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => '***','secret-access-key' => '***',) ) );" wp-config.php
+              sleep 10
+              sed -i "127idefine( 'AS3CF_SETTINGS', serialize( array('provider' => 'aws','access-key-id' => '***','secret-access-key' => '***', 'use-server-roles' => false, 'bucket' => 'sodbaveka-website-public-bucket', 'region' => 'eu-west-3', 'copy-to-s3' => true, 'enable-object-prefix' => true, 'object-prefix' => 'wp-content/uploads/', 'use-yearmonth-folders' => true, 'object-versioning' => true, 'serve-from-s3' => true, 'remove-local-file' => true,) ) );" wp-config.php
               chmod -R 777 /var/www/html/
               touch /var/www/html/installOk.txt && echo "Wordpress installation : Completed." >> /var/log/wordpressDocker.txt
           fi
@@ -646,4 +650,18 @@ Resources:
           Protocol: "email"
   #
   #
+  ### Next step : Create S3 public bucket
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: sodbaveka-website-public-bucket  
+      AccessControl: PublicReadWrite
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-website-public-bucket'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #    
           
