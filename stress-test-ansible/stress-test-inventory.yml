@@ -1,0 +1,6 @@
+all:
+  children:
+    hosts:
+      hosts:
+        ec1:
+        ec2:
