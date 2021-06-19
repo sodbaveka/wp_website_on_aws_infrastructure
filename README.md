@@ -60,6 +60,7 @@ It takes care of :
      * Create S3 public bucket
      * ...In progress...;-p
 
+Do not forget to fill your iam 'access-key-id' and 'secret-access-key' in the 'UserData' of Launch Configuration.
 Please feel free to message me if you have any questions.
 
 Bye ;-)

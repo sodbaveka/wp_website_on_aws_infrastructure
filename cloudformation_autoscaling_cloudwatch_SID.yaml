@@ -144,6 +144,13 @@ Resources:
       MinSize: 1
       TargetGroupARNs: 
         - !Ref WebsiteTargetGroup
+      Tags:
+        - Key: Name
+          Value: 'autoscaling-instance'
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: 'P10_OCR'
+          PropagateAtLaunch: true
   
   
   ## Next step : Create Target Group
