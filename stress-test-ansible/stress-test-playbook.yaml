@@ -1,9 +1,0 @@
----
-- name: Stress Testing Remote
-  hosts: instancesEC2
-  gather_facts: True
-  tasks:
-    - name: Stress Testing
-      shell:
-        cmd: stress --cpu 8 --timeout 600
-...
