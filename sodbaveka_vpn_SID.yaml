@@ -379,15 +379,10 @@ Resources:
           systemctl enable iptables
           iptables --flush -t filter
           iptables --flush -t nat
-          iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-          iptables -A FORWARD -i eth0 -j ACCEPT
-          iptables -A FORWARD -o eth0 -j ACCEPT
           iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 8080 -j DNAT --to 10.0.30.30:8080
           iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 2222 -j DNAT --to 10.0.30.30:22
           service iptables save
 
-          route add -net 192.168.100.0/24 gw 10.0.3.1
-                    
           amazon-linux-extras install epel -y
           yum install nmap -y
           yum install strongswan -y
@@ -408,7 +403,7 @@ Resources:
               leftid=$PUB_IP
               leftsubnet=10.0.30.0/24
               right=109.22.80.19
-              rightsubnet=0.0.0.0/0
+              rightsubnet=192.168.100.0/24
               ike=aes256-sha1-modp1024!
               esp=aes256-sha1!
               aggressive=no
@@ -424,7 +419,8 @@ Resources:
           $PUB_IP 109.22.80.19 : PSK "W+XhKhK89tHgLfuoa7L+gDyXA/2jDHW2"
           EOF
 
-          systemctl restart NetworkManager && systemctl restart strongswan
+          systemctl stop strongswan
+          systemctl restart NetworkManager && systemctl start strongswan
   #
   #
   ### Next step : Create EC2 Security Group
@@ -492,6 +488,8 @@ Resources:
           export STACK_NAME=${AWS::StackName}
           echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
           echo "Who am i ? AwsIntraEc2" >> /home/ec2-user/TEMOIN-001
+
+          apt install smbclient -y
 
           echo "OS update : In progress..." >> /var/log/userdata.txt
           yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
