@@ -269,55 +269,59 @@ Resources:
     Properties:
       GroupDescription: VPN security group
       SecurityGroupEgress:
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 2222
-          ToPort: 2222
-          CidrIp: 0.0.0.0/0
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+        # - IpProtocol: icmp
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 80
+        #   ToPort: 80
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 8080
+        #   ToPort: 8080
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 443
+        #   ToPort: 443
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 22
+        #   ToPort: 22
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 2222
+        #   ToPort: 2222
+        #   CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 2222
-          ToPort: 2222
-          CidrIp: 0.0.0.0/0
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+        # - IpProtocol: icmp
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 80
+        #   ToPort: 80
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 8080
+        #   ToPort: 8080
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 443
+        #   ToPort: 443
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 22
+        #   ToPort: 22
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 2222
+        #   ToPort: 2222
+        #   CidrIp: 0.0.0.0/0
       VpcId: !Ref SodbavekaVPC
       Tags:
         - Key: Name
@@ -352,7 +356,8 @@ Resources:
         'Fn::Base64': !Sub |
           #!/bin/bash
           export STACK_NAME=${AWS::StackName}
-          export PUB_IP=`dig @resolver1.opendns.com -t A -4 myip.opendns.com +short`
+          export PUB_IP=`curl ifconfig.me`
+          export PUB_IP2=`dig @resolver1.opendns.com -t A -4 myip.opendns.com +short`
           echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
           echo "VPN Public IP : "$PUB_IP >> /home/ec2-user/TEMOIN-001
           echo "Who am i ? AwsVpnEc2" >> /home/ec2-user/TEMOIN-001
@@ -360,7 +365,14 @@ Resources:
           echo "OS update : In progress..." >> /var/log/userdata.txt
           yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt
 
-          sysctl -w net.ipv4.ip_forward=1 && echo "Activate forwarding : Completed." >> /var/log/userdata.txt
+          cat >> /etc/sysctl.conf << EOF
+          net.ipv4.ip_forward = 1
+          net.ipv4.conf.all.accept_redirects = 0
+          net.ipv4.conf.all.send_redirects = 0
+          net.ipv6.conf.all.forwarding = 1 
+          EOF
+          sysctl -p /etc/sysctl.conf && echo "Activate forwarding : Completed." >> /var/log/userdata.txt
+
           echo "NAT and DNAT rules : In progress..." >> /var/log/userdata.txt
           yum install -y iptables iptables-services
           systemctl start iptables
@@ -373,8 +385,46 @@ Resources:
           iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 8080 -j DNAT --to 10.0.30.30:8080
           iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 2222 -j DNAT --to 10.0.30.30:22
           service iptables save
-          
-          
+
+          route add -net 192.168.100.0/24 gw 10.0.3.1
+                    
+          amazon-linux-extras install epel -y
+          yum install nmap -y
+          yum install strongswan -y
+          systemctl start strongswan
+          systemctl enable strongswan
+
+          cat > /etc/strongswan/ipsec.conf << EOF
+          config setup
+              charondebug="all"
+              uniqueids=yes
+              strictcrlpolicy=no
+          conn aws-to-local
+              type=tunnel
+              auto=start
+              keyexchange=ikev2
+              authby=secret
+              lest=%defaultroute
+              leftid=$PUB_IP
+              leftsubnet=10.0.30.0/24
+              right=109.22.80.19
+              rightsubnet=0.0.0.0/0
+              ike=aes256-sha1-modp1024!
+              esp=aes256-sha1!
+              aggressive=no
+              keyingtries=%forever
+              ikelifetime=28800s
+              lifetime=3600s
+              dpddelay=30s
+              dpdtimeout=120s
+              dpdaction=restart
+          EOF
+
+          cat >> /etc/strongswan/ipsec.secrets << EOF 
+          $PUB_IP 109.22.80.19 : PSK "W+XhKhK89tHgLfuoa7L+gDyXA/2jDHW2"
+          EOF
+
+          systemctl restart NetworkManager && systemctl restart strongswan
   #
   #
   ### Next step : Create EC2 Security Group
@@ -386,22 +436,24 @@ Resources:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
+        - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 80
+        #   ToPort: 80
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 8080
+        #   ToPort: 8080
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: tcp
+        #   FromPort: 22
+        #   ToPort: 22
+        #   CidrIp: 0.0.0.0/0
+        # - IpProtocol: icmp
+        #   FromPort: -1
+        #   ToPort: -1
+        #   CidrIp: 0.0.0.0/0
       VpcId: !Ref SodbavekaVPC
       Tags:
         - Key: Name
