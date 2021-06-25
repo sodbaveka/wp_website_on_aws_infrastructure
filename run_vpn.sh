@@ -1,25 +1,26 @@
 #! /bin/bash
+MY_PUB_IP=`curl ifconfig.me`
 sudo cat > /etc/ipsec.secrets << EOF
 # ipsec.secrets - strongSwan IPsec secrets file - sfr ip 109.22.80.19
-109.22.80.19 $1 : PSK "W+XhKhK89tHgLfuoa7L+gDyXA/2jDHW2"
+$MY_PUB_IP $1 : PSK "W+XhKhK89tHgLfuoa7L+gDyXA/2jDHW2"
 EOF
 
 sudo cat > /etc/ipsec.conf << EOF
 config setup
-		charondebug="all"
-		uniqueids = yes
-		strictcrlpolicy=no
+        charondebug="all"
+        uniqueids = yes
+        strictcrlpolicy=no
         
 conn lan-to-aws
-		type=tunnel
+        type=tunnel
         auto=start
         keyexchange=ikev2
         authby=secret
         left=%defaultroute
-        leftid=109.22.80.19
-        leftsubnet=0.0.0.0/0
+        leftid=$MY_PUB_IP
+        leftsubnet=192.168.100.0/24
         right=$1
-        rightsubnet=0.0.0.0/0
+        rightsubnet=10.0.30.0/24
         ike=aes256-sha1-modp1024!
         esp=aes256-sha1!
         aggressive=no

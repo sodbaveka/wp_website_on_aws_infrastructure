@@ -14,10 +14,12 @@ My name is Mickaël alias sodbaveka.
 I created this repository as a lab to discover wordpress, docker, aws infrastructure and services.
 
 My project as a learner is to create a wordpress website using docker, on aws infrastructure.
+Wordpress website take advantage of aws services like S3, RDS ans EFS.
+I realized a VPN between on-premise private subnet and aws private subnet too.
 
 The purpose of the yaml file 'sodbaveka_aws_full_infrastructure.yaml' is to build the infrastructure using AWS CloudFormation...from scratch.
 
-It takes care of :
+Code takes care of :
  * Create network
      * Create VPC
      * Create subnets in new VPC
@@ -58,9 +60,13 @@ It takes care of :
      * Create Scale Up Policy
      * Create topic to send notification by mail
      * Create S3 public bucket
+     * Create VPN Security Group
+     * Create VPN EC2 instance
+     * Create Security Group for intranet ec2 instance
+     * Create Intranet EC2 instance
      * ...In progress...;-p
 
-Do not forget to fill your iam 'access-key-id' and 'secret-access-key' in the 'UserData' of Launch Configuration.
+Do not forget to fill your iam 'access-key-id' and 'secret-access-key' in the 'UserData' of Launch Configuration (l.382).
 Please feel free to message me if you have any questions.
 
 Bye ;-)
@@ -79,6 +85,7 @@ A list of technologies used within the project :
 * Docker
 * Wordpress
 * OpenVPN
+* Debian/Ubuntu OS
 * Amazon Linux 2 OS
 * AlmaLinux OS
 
