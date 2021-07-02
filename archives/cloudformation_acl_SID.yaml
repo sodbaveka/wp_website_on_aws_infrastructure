@@ -1,0 +1,146 @@
+### Generalities
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation VPC Template
+### Create ressources
+Resources:
+  ###########
+  # Network #
+  ###########
+  #
+  #
+  ### First step : Create VPC
+  SodbavekaVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-main-VPC'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create private subnets in new VPC
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3c
+      CidrBlock: 10.0.30.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-private-c'
+      VpcId: !Ref SodbavekaVPC 
+  #
+  #
+  ### Next step : Create public subnets in new VPC
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3a
+      CidrBlock: 10.0.1.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-a'
+      VpcId: !Ref SodbavekaVPC  
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3b
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-b'
+      VpcId: !Ref SodbavekaVPC 
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: eu-west-3c
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: 'sodbaveka-public-c'
+      VpcId: !Ref SodbavekaVPC
+  #
+  #
+  ### Next step : Create Network Access Control List (NACL) for public subnets in new VPC
+  PublicNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+       VpcId: !Ref SodbavekaVPC
+       Tags:
+        - Key: Name
+          Value: 'NACL-Public-Networks'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create entries (rules) in network ACL with specified rule numbers.
+  InboundRule100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 100
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+       PortRange:
+         From: 22
+         To: 22
+  InboundRule200:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 200
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 10.0.0.0/16
+       PortRange:
+         From: 3306
+         To: 3306
+  InboundRule300:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 300
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 10.0.0.0/16
+       PortRange:
+         From: 2049
+         To: 2049
+  InboundRule400:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 400
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+       PortRange:
+         From: 80
+         To: 80
+  OutboundRule100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 100
+       Protocol: -1
+       Egress: true
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+  #
+  #
+  ### Next step : Associate subnets with network ACL
+  PublicAAsso:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties: 
+      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref PublicSubnetA
+  PublicBAsso:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties: 
+      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref PublicSubnetB
+  #
+  #

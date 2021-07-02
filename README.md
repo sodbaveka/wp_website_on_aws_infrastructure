@@ -64,6 +64,9 @@ Code takes care of :
      * Create VPN EC2 instance
      * Create Security Group for intranet ec2 instance
      * Create Intranet EC2 instance
+     * Create Network Access Control List (NACL) for public subnets in VPC
+     * Create entries (rules) in network ACL with specified rule numbers
+     * Associate subnets with network ACL
      * ...In progress...;-p
 
 Do not forget to fill your iam 'access-key-id' and 'secret-access-key' in the 'UserData' of Launch Configuration (l.382).
@@ -84,7 +87,7 @@ A list of technologies used within the project :
 * aws CloudWatch
 * Docker
 * Wordpress
-* OpenVPN
+* Strongswan
 * Debian/Ubuntu OS
 * Amazon Linux 2 OS
 * AlmaLinux OS
@@ -111,4 +114,5 @@ AWS CloudFormation --> Create a CloudFormation stack
 * https://docs.aws.amazon.com/
 * https://docs.docker.com/
 * https://deliciousbrains.com/wp-offload-media/
+* https://wp-cli.org/fr/
 * 'aws and docker for dummies’ :-p 

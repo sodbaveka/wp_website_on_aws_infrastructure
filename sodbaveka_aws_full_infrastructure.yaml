@@ -2,7 +2,7 @@
 ### Generalities
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  AWS CloudFormation VPC Template
+  AWS CloudFormation Full Infrastructure Template
 ### Create ressources
 Resources:
   ###########
@@ -168,13 +168,12 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          # A MODIFIER
-          CidrIp: 0.0.0.0/0
-          # A SUPPRIMER
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: 10.0.0.0/16
+        #   # A SUPPRIMER
+        # - IpProtocol: tcp
+        #   FromPort: 22
+        #   ToPort: 22
+        #   CidrIp: 0.0.0.0/0
       VpcId: !Ref SodbavekaVPC
       Tags:
         - Key: Name
@@ -202,6 +201,7 @@ Resources:
   ### Next step : Create RDS instance
   DBserver001:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
     Properties:
       DBSubnetGroupName: !Ref DBSubnetGroup001
       Engine: MySQL
@@ -523,7 +523,7 @@ Resources:
   ### Next step : Create S3 public bucket
   S3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
     Properties:
       BucketName: sodbaveka-website-public-bucket  
       AccessControl: PublicReadWrite
@@ -805,4 +805,104 @@ Resources:
 
           docker run -p 8080:8080 bitnami/apache:latest && echo "Running apache docker : In progress..." >> /var/log/userdata.txt
   #
-  #        
+  #       
+  ### Next step : Create Network Access Control List (NACL) for public subnets in new VPC
+  PublicNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+       VpcId: !Ref SodbavekaVPC
+       Tags:
+        - Key: Name
+          Value: 'NACL-Public-Networks'
+        - Key: Project
+          Value: 'P10_OCR'
+  #
+  #
+  ### Next step : Create entries (rules) in network ACL with specified rule numbers
+  # InboundRule50:
+  #   Type: AWS::EC2::NetworkAclEntry
+  #   Properties:
+  #      NetworkAclId: !Ref PublicNACL
+  #      RuleNumber: 50
+  #      Protocol: -1
+  #      RuleAction: allow
+  #      CidrBlock: 0.0.0.0/0
+  InboundRule100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 100
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+       PortRange:
+         From: 22
+         To: 22
+  InboundRule200:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 200
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 10.0.0.0/16
+       PortRange:
+         From: 3306
+         To: 3306
+  InboundRule300:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 300
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 10.0.0.0/16
+       PortRange:
+         From: 2049
+         To: 2049
+  InboundRule400:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 400
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+       PortRange:
+         From: 80
+         To: 80
+  InboundRule500:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 500
+       Protocol: 6
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+       PortRange:
+         From: 1024
+         To: 65535
+  OutboundRule100:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+       NetworkAclId: !Ref PublicNACL
+       RuleNumber: 100
+       Protocol: -1
+       Egress: true
+       RuleAction: allow
+       CidrBlock: 0.0.0.0/0
+  #
+  #
+  ### Next step : Associate subnets with network ACL
+  PublicAAsso:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties: 
+      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref PublicSubnetA
+  PublicBAsso:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties: 
+      NetworkAclId: !Ref PublicNACL
+      SubnetId: !Ref PublicSubnetB
+  #
+  #
