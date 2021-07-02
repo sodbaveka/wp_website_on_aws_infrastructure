@@ -3,13 +3,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   AWS CloudFormation Full Infrastructure Template
-#
-#
 ### Create ressources
 Resources:
-  ###############
-  #   Network   #
-  ###############
+  ###########
+  # Network #
+  ###########
   #
   #
   ### First step : Create VPC
@@ -23,24 +21,6 @@ Resources:
         - Key: Project
           Value: 'P10_OCR'
   ### Next step : Create private subnets in new VPC
-  PrivateSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: eu-west-3a
-      CidrBlock: 10.0.10.0/24
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-private-a'
-      VpcId: !Ref SodbavekaVPC 
-  PrivateSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: eu-west-3b
-      CidrBlock: 10.0.20.0/24
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-private-b'
-      VpcId: !Ref SodbavekaVPC 
   PrivateSubnetC:
     Type: AWS::EC2::Subnet
     Properties:
@@ -91,24 +71,6 @@ Resources:
     Properties:
       VpcId: !Ref SodbavekaVPC
       InternetGatewayId: !Ref InternetGateway
-  ### Next step : Create elastic IPs for NAT gateways
-  NatEipC:
-    Type: AWS::EC2::EIP
-    Properties:
-      Domain: vpc
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-elastic-ip-c'
-  ### Next step : Create NAT gateways
-  NatGatewayC:
-    DependsOn: AttachInternetGateway
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatEipC.AllocationId
-      SubnetId: !Ref PublicSubnetC
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-nat-c'
   ### Next step : Create route tables
   PublicRouteTableA:
     Type: AWS::EC2::RouteTable
@@ -131,20 +93,6 @@ Resources:
       Tags:
         - Key: Name
           Value: 'sodbaveka-route-public-c'
-  PrivateRouteTableA:
-    Type: AWS::EC2::RouteTable
-    Properties: 
-      VpcId: !Ref SodbavekaVPC
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-route-private-a'
-  PrivateRouteTableB:
-    Type: AWS::EC2::RouteTable
-    Properties: 
-      VpcId: !Ref SodbavekaVPC
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-route-private-b'
   PrivateRouteTableC:
     Type: AWS::EC2::RouteTable
     Properties: 
@@ -168,16 +116,6 @@ Resources:
     Properties:
       RouteTableId: !Ref PublicRouteTableC
       SubnetId: !Ref PublicSubnetC
-  AttachPrivateRouteTableA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableA
-      SubnetId: !Ref PrivateSubnetA
-  AttachPrivateRouteTableB:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableB
-      SubnetId: !Ref PrivateSubnetB
   AttachPrivateRouteTableC:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -209,18 +147,12 @@ Resources:
     Type: AWS::EC2::Route
     Properties: 
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayC
-      RouteTableId: !Ref PrivateRouteTableC
-  PrivateRouteC2:
-    Type: AWS::EC2::Route
-    Properties: 
-      DestinationCidrBlock: 192.168.100.0/24
       InstanceId: !Ref AwsVpnEc2
       RouteTableId: !Ref PrivateRouteTableC
   #
   #
   # ##################
-  # #   Ressources   #
+  # # Infrastructure #
   # ##################
   #
   #
@@ -257,8 +189,8 @@ Resources:
       DBSubnetGroupDescription: DB subnet group
       DBSubnetGroupName: sodbaveka-rds-DBSubnetGroup
       SubnetIds: 
-        - !Ref PrivateSubnetA
-        - !Ref PrivateSubnetB
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
       Tags: 
         - Key: Name
           Value: 'sodbaveka-rds-DBSubnetGroup'
@@ -391,14 +323,12 @@ Resources:
           #!/bin/bash
           export DB_HOST=${DBserver001.Endpoint.Address}
           export STACK_NAME=${AWS::StackName}
-          export EFS_IP1=${MountTarget1.IpAddress}
-          export EFS_IP2=${MountTarget2.IpAddress}
+          export EFS_IP=${MountTarget1.IpAddress}
           export EFS_ID=${EFSFileSystem.FileSystemId}
           export LB_DNS=${WebsiteLoadBalancer.DNSName}
           export BUCKET=${S3Bucket}
           echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
-          echo "EFS ip1 : "$EFS_IP1 >> /home/ec2-user/TEMOIN-001
-          echo "EFS ip2 : "$EFS_IP2 >> /home/ec2-user/TEMOIN-001
+          echo "EFS ip : "$EFS_IP >> /home/ec2-user/TEMOIN-001
           echo "EFS id : "$EFS_ID >> /home/ec2-user/TEMOIN-001
           echo "Database host : "$DB_HOST >> /home/ec2-user/TEMOIN-001
           echo "Load Balancer DNS : "$LB_DNS >> /home/ec2-user/TEMOIN-001
@@ -593,7 +523,7 @@ Resources:
   ### Next step : Create S3 public bucket
   S3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
     Properties:
       BucketName: sodbaveka-website-public-bucket  
       AccessControl: PublicReadWrite
@@ -703,17 +633,20 @@ Resources:
       ImageId: ami-00c08ad1a6ca8ca7c
       KeyName: P10-aws
       NetworkInterfaces:
-        # - AssociatePublicIpAddress: true
-        - DeviceIndex: "0"
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
           GroupSet: 
             - !Ref VPNSecurityGroup
-          SubnetId: !Ref PrivateSubnetC
+          SubnetId: !Ref PublicSubnetC
+      # SubnetId: !Ref PublicSubnetA
       SourceDestCheck: false
       Tags:
         - Key: Name
           Value: 'sodbaveka-ec2-VPN'
         - Key: Project
           Value: 'P10_OCR'
+      # SecurityGroups: 
+      #   - !Ref InfraEC2SecurityGroup
       UserData: 
         'Fn::Base64': !Sub |
           #!/bin/bash
@@ -784,7 +717,8 @@ Resources:
           EOF
 
           systemctl stop strongswan
-          systemctl restart NetworkManager && sleep 20 && systemctl start strongswan
+          systemctl restart NetworkManager && sleep 10 
+          systemctl start strongswan
   #
   #
   ### Next step : Create Security Group for intranet ec2 instance
@@ -946,8 +880,8 @@ Resources:
        RuleAction: allow
        CidrBlock: 0.0.0.0/0
        PortRange:
-         From: 32768
-         To: 61000
+         From: 1024
+         To: 65535
   OutboundRule100:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
@@ -972,33 +906,3 @@ Resources:
       SubnetId: !Ref PublicSubnetB
   #
   #
-  ### Next step : Create bastion EC2 instance 
-  AwsBastionEc2:
-    Type : AWS::EC2::Instance
-    Properties:
-      InstanceType: t2.micro
-      ImageId: ami-00c08ad1a6ca8ca7c
-      KeyName: P10-aws
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: true
-          DeviceIndex: "0"
-          GroupSet: 
-            - !Ref InfraEC2SecurityGroup
-          SubnetId: !Ref PublicSubnetC
-      Tags:
-        - Key: Name
-          Value: 'sodbaveka-ec2-bastion'
-        - Key: Project
-          Value: 'P10_OCR'
-      UserData: 
-        'Fn::Base64': !Sub |
-          #!/bin/bash
-          export STACK_NAME=${AWS::StackName}
-          echo "Stack name : "$STACK_NAME > /home/ec2-user/TEMOIN-001
-          echo "Who am i ? AwsBastionEc2" >> /home/ec2-user/TEMOIN-001
-
-          amazon-linux-extras install epel -y
-          yum install samba-client -y
-
-          echo "OS update : In progress..." >> /var/log/userdata.txt
-          yum update -y && echo "OS update : Completed." >> /var/log/userdata.txt

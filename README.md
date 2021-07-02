@@ -25,8 +25,8 @@ Code takes care of :
      * Create subnets in new VPC
      * Create internet gateway
      * Attach internet gateway to VPC
-     * Create elastic IPs for NAT gateways
-     * Create NAT gateways
+     * Create elastic IPs for NAT gateway
+     * Create NAT gateway
      * Create route tables
      * Create route tables associations
      * Create routes for the public subnet of Availability Zone A
